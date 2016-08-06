@@ -1,0 +1,7 @@
+## Interface: 70000
+## Title: AtonementBar
+## Author: Ayfid
+## Version: 0.1
+## SavedVariables: AtonementBarDB
+
+AtonementBar.xml
