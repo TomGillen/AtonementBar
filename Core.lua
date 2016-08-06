@@ -534,7 +534,7 @@ function AtonementBar:Update()
 
   local dangerDuration = 0
   if #self.durations >= thresholds.danger then
-    dangerDuration = math.max(0, math.min(maxDuration, self.durations[thresholds.danger] - warningDuration))
+    dangerDuration = math.max(0, math.min(maxDuration, self.durations[thresholds.danger] - (warningDuration + healthyDuration)))
   end
 
   if healthyDuration > 0 then
