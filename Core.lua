@@ -69,7 +69,7 @@ local options = {
           set = "SetShowTimers"
         },
         colors = {
-          name = "Colors",
+          name = "Bar Colors",
           type = "group",
           order = 1,
           args = {
@@ -105,6 +105,17 @@ local options = {
                 return AtonementBar.db.profile.dangercolor.r, AtonementBar.db.profile.dangercolor.g, AtonementBar.db.profile.dangercolor.b, 1
               end,
               set = "SetDangerColor"
+            },
+            highlight = {
+              name = "Healthy Highlight Border Color",
+              desc = "The border color while a healthy number of atonements are active.",
+              type = "color",
+              width = "full",
+              order = 5,
+              get = function(info)
+                return AtonementBar.db.profile.highlightBorderColor.r, AtonementBar.db.profile.highlightBorderColor.g, AtonementBar.db.profile.highlightBorderColor.b, 1
+              end,
+              set = "SetHighlightBorderColor"
             }
           }
         },
@@ -115,36 +126,51 @@ local options = {
           args = {
             healthy = {
               name = "High",
-              desc = "The ideal number of atonements when high healing output is needed",
+              desc = "The ideal number of atonements when high healing output is needed. You want to set yourself up into high with enough time remaining to last through the next burst.",
               type = "range",
               min = 0,
               softMax = 16,
+              step = 1,
               order = 1,
               width = "double",
               get = function(info) return AtonementBar.db.profile.partythresholds.healthy end,
-              set = function(info, val) AtonementBar.db.profile.partythresholds.healthy = val end
+              set = function(info, val)
+                AtonementBar.db.profile.partythresholds.healthy = val
+                AtonementBar.db.profile.partythresholds.warning = math.min(val, AtonementBar.db.profile.partythresholds.warning)
+                AtonementBar.db.profile.partythresholds.danger = math.min(val, AtonementBar.db.profile.partythresholds.danger)
+              end
             },
             warning = {
               name = "Medium",
-              desc = "The number of atonements wanted outside of heavy damage",
+              desc = "The number of atonements wanted outside of heavy damage. This is where you want to be when conserving mana between cooldowns.",
               type = "range",
               min = 0,
               softMax = 16,
+              step = 1,
               order = 2,
               width = "double",
               get = function(info) return AtonementBar.db.profile.partythresholds.warning end,
-              set = function(info, val) AtonementBar.db.profile.partythresholds.warning = val end
+              set = function(info, val)
+                AtonementBar.db.profile.partythresholds.healthy = math.max(val, AtonementBar.db.profile.partythresholds.healthy)
+                AtonementBar.db.profile.partythresholds.warning = val
+                AtonementBar.db.profile.partythresholds.danger = math.min(val, AtonementBar.db.profile.partythresholds.danger)
+              end
             },
             danger = {
               name = "Low",
-              desc = "The minimum number of atonements that should ever be up",
+              desc = "The minimum number of atonements that should ever be up. Below this, AtonementBar will be empty, but ideally you want to be into Medium.",
               type = "range",
               min = 0,
               softMax = 16,
+              step = 1,
               order = 3,
               width = "double",
               get = function(info) return AtonementBar.db.profile.partythresholds.danger end,
-              set = function(info, val) AtonementBar.db.profile.partythresholds.danger = val end
+              set = function(info, val)
+                AtonementBar.db.profile.partythresholds.healthy = math.max(val, AtonementBar.db.profile.partythresholds.healthy)
+                AtonementBar.db.profile.partythresholds.warning = math.max(val, AtonementBar.db.profile.partythresholds.warning)
+                AtonementBar.db.profile.partythresholds.danger = val
+              end
             }
           }
         },
@@ -155,36 +181,51 @@ local options = {
           args = {
             healthy = {
               name = "High",
-              desc = "The ideal number of atonements when high healing output is needed",
+              desc = "The ideal number of atonements when high healing output is needed. You want to set yourself up into high with enough time remaining to last through the next burst.",
               type = "range",
               min = 0,
               softMax = 16,
+              step = 1,
               order = 1,
               width = "double",
               get = function(info) return AtonementBar.db.profile.raidthresholds.healthy end,
-              set = function(info, val) AtonementBar.db.profile.raidthresholds.healthy = val end
+              set = function(info, val)
+                AtonementBar.db.profile.raidthresholds.healthy = val
+                AtonementBar.db.profile.raidthresholds.warning = math.min(val, AtonementBar.db.profile.raidthresholds.warning)
+                AtonementBar.db.profile.raidthresholds.danger = math.min(val, AtonementBar.db.profile.raidthresholds.danger)
+              end
             },
             warning = {
               name = "Medium",
-              desc = "The number of atonements wanted outside of heavy damage",
+              desc = "The number of atonements wanted outside of heavy damage. This is where you want to be when conserving mana between cooldowns.",
               type = "range",
               min = 0,
               softMax = 16,
+              step = 1,
               order = 2,
               width = "double",
               get = function(info) return AtonementBar.db.profile.raidthresholds.warning end,
-              set = function(info, val) AtonementBar.db.profile.raidthresholds.warning = val end
+              set = function(info, val)
+                AtonementBar.db.profile.raidthresholds.healthy = math.max(val, AtonementBar.db.profile.raidthresholds.healthy)
+                AtonementBar.db.profile.raidthresholds.warning = val
+                AtonementBar.db.profile.raidthresholds.danger = math.min(val, AtonementBar.db.profile.raidthresholds.danger)
+              end
             },
             danger = {
               name = "Low",
-              desc = "The minimum number of atonements that should ever be up",
+              desc = "The minimum number of atonements that should ever be up. Below this, AtonementBar will be empty, but ideally you want to be into Medium.",
               type = "range",
               min = 0,
               softMax = 16,
+              step = 1,
               order = 3,
               width = "double",
               get = function(info) return AtonementBar.db.profile.raidthresholds.danger end,
-              set = function(info, val) AtonementBar.db.profile.raidthresholds.danger = val end
+              set = function(info, val)
+                AtonementBar.db.profile.raidthresholds.healthy = math.max(val, AtonementBar.db.profile.raidthresholds.healthy)
+                AtonementBar.db.profile.raidthresholds.warning = math.max(val, AtonementBar.db.profile.raidthresholds.warning)
+                AtonementBar.db.profile.raidthresholds.danger = val
+              end
             }
           }
         }
@@ -243,6 +284,30 @@ local options = {
           order = 4,
           set = "SetFrameHeight",
           get = function(info) return AtonementBar.db.profile.height end
+        },
+        backgroundColor = {
+          name = "Background Color",
+          desc = "The frame background color",
+          type = "color",
+          width = "full",
+          hasAlpha = true,
+          order = 5,
+          get = function(info)
+            return AtonementBar.db.profile.backgroundColor.r, AtonementBar.db.profile.backgroundColor.g, AtonementBar.db.profile.backgroundColor.b, AtonementBar.db.profile.backgroundColor.a
+          end,
+          set = "SetBackgroundColor"
+        },
+        borderColor = {
+          name = "Border color",
+          desc = "The frame border color",
+          type = "color",
+          width = "full",
+          hasAlpha = true,
+          order = 6,
+          get = function(info)
+            return AtonementBar.db.profile.borderColor.r, AtonementBar.db.profile.borderColor.g, AtonementBar.db.profile.borderColor.b, AtonementBar.db.profile.borderColor.a
+          end,
+          set = "SetBorderColor"
         }
       }
     }
@@ -362,6 +427,36 @@ function AtonementBar:SetDangerColor(info, r, g, b, a)
   self:SetupFrame()
 end
 
+function AtonementBar:SetHighlightBorderColor(info, r, g, b, a)
+  self.db.profile.highlightBorderColor = {
+    r = r,
+    g = g,
+    b = b
+  }
+end
+
+function AtonementBar:SetBackgroundColor(info, r, g, b, a)
+  self.db.profile.backgroundColor = {
+    r = r,
+    g = g,
+    b = b,
+    a = a
+  }
+
+  self:SetupFrame()
+end
+
+function AtonementBar:SetBorderColor(info, r, g, b, a)
+  self.db.profile.borderColor = {
+    r = r,
+    g = g,
+    b = b,
+    a = a
+  }
+
+  self:SetupFrame()
+end
+
 -- Initialisation
 
 local function IsDiscPriest()
@@ -455,13 +550,13 @@ function AtonementBar:SetupFrame()
   frame.warning = frame.warning or frame.barscontainer:CreateTexture()
   frame.warning:SetTexture(statusBarTexture)
   frame.warning:SetVertexColor(conf.warningcolor.r, conf.warningcolor.g, conf.warningcolor.b, 0.7)
-  frame.warning.text = frame.healthy.text or frame.barscontainer:CreateFontString()
+  frame.warning.text = frame.warning.text or frame.barscontainer:CreateFontString()
   frame.warning.text:SetFont(media:Fetch("font", conf.font, false), 12, "OUTLINE")
 
   frame.danger = frame.danger or frame.barscontainer:CreateTexture()
   frame.danger:SetTexture(statusBarTexture)
   frame.danger:SetVertexColor(conf.dangercolor.r, conf.dangercolor.g, conf.dangercolor.b, 0.7)
-  frame.danger.text = frame.healthy.text or frame.barscontainer:CreateFontString()
+  frame.danger.text = frame.danger.text or frame.barscontainer:CreateFontString()
   frame.danger.text:SetFont(media:Fetch("font", conf.font, false), 12, "OUTLINE")
 
   frame.bars:ClearAllPoints();
@@ -593,17 +688,29 @@ function AtonementBar:Update()
 
   local healthyDuration = 0
   if #self.durations >= thresholds.healthy then
-    healthyDuration = math.max(0, math.min(maxDuration, self.durations[thresholds.healthy]))
+    if thresholds.healthy == 0 then
+      healthyDuration = maxDuration
+    else
+      healthyDuration = math.max(0, math.min(maxDuration, self.durations[thresholds.healthy]))
+    end
   end
 
   local warningDuration = 0
   if #self.durations >= thresholds.warning then
-    warningDuration = math.max(0, math.min(maxDuration, self.durations[thresholds.warning] - healthyDuration))
+    if thresholds.warning == 0 then
+      warningDuration = maxDuration
+    else
+      warningDuration = math.max(0, math.min(maxDuration, self.durations[thresholds.warning]))
+    end
   end
 
   local dangerDuration = 0
   if #self.durations >= thresholds.danger then
-    dangerDuration = math.max(0, math.min(maxDuration, self.durations[thresholds.danger] - (warningDuration + healthyDuration)))
+    if thresholds.danger == 0 then
+      dangerDuration = maxDuration
+    else
+      dangerDuration = math.max(0, math.min(maxDuration, self.durations[thresholds.danger]))
+    end
   end
 
   local barSize = self.frame.barscontainer:GetWidth()
@@ -611,10 +718,21 @@ function AtonementBar:Update()
     barSize = self.frame.barscontainer:GetHeight()
   end
 
+  -- update border colors
+  if healthyDuration > 0 then
+    self.frame.bars:SetBackdropBorderColor(conf.highlightBorderColor.r, conf.highlightBorderColor.g, conf.highlightBorderColor.b, conf.highlightBorderColor.a)
+    self.frame.counter:SetBackdropBorderColor(conf.highlightBorderColor.r, conf.highlightBorderColor.g, conf.highlightBorderColor.b, conf.highlightBorderColor.a)
+  else
+    self.frame.bars:SetBackdropBorderColor(conf.borderColor.r, conf.borderColor.g, conf.borderColor.b, conf.borderColor.a)
+    self.frame.counter:SetBackdropBorderColor(conf.borderColor.r, conf.borderColor.g, conf.borderColor.b, conf.borderColor.a)
+  end
+
+  -- update timer bar time text
   local fifteenPixelsDuration = (20 / barSize) * maxDuration
   local textDisplayThreshold = maxDuration - fifteenPixelsDuration
 
-  if healthyDuration > 0 and (warningDuration - healthyDuration) > fifteenPixelsDuration and conf.showTimers then
+  local warningCloseToHealhy = (healthyDuration - warningDuration) <= fifteenPixelsDuration
+  if healthyDuration > 0 and not warningCloseToHealhy and conf.showTimers then
     self.frame.healthy.text:SetText(math.ceil(healthyDuration))
     self.frame.healthy.text:SetAlpha(cooldownFade(healthyDuration, textDisplayThreshold, 0.5))
     self.frame.healthy.text:Show()
@@ -622,7 +740,8 @@ function AtonementBar:Update()
     self.frame.healthy.text:Hide()
   end
 
-  if warningDuration > 0 and (dangerDuration - warningDuration) > fifteenPixelsDuration and conf.showTimers then
+  local dangerCloseToWarning = (dangerDuration - warningDuration) <= fifteenPixelsDuration
+  if warningDuration > 0 and not dangerCloseToWarning and conf.showTimers then
     self.frame.warning.text:SetText(math.ceil(warningDuration))
     self.frame.warning.text:SetAlpha(cooldownFade(warningDuration, textDisplayThreshold, 0.5))
     self.frame.warning.text:Show()
@@ -641,12 +760,12 @@ function AtonementBar:Update()
   local frameWidthUnit = barSize / maxDuration
   if conf.orientation == "horizontal" then
     self.frame.healthy:SetPoint("RIGHT", self.frame.barscontainer, "LEFT", healthyDuration * frameWidthUnit, 0)
-    self.frame.warning:SetPoint("RIGHT", self.frame.healthy, "RIGHT", warningDuration * frameWidthUnit, 0)
-    self.frame.danger:SetPoint("RIGHT", self.frame.warning, "RIGHT", dangerDuration * frameWidthUnit, 0)
+    self.frame.warning:SetPoint("RIGHT", self.frame.barscontainer, "LEFT", warningDuration * frameWidthUnit, 0)
+    self.frame.danger:SetPoint("RIGHT", self.frame.barscontainer, "LEFT", dangerDuration * frameWidthUnit, 0)
   else
-    self.frame.healthy:SetPoint("BOTTOM", self.frame.barscontainer, "TOP", 0, -(healthyDuration * frameWidthUnit))
-    self.frame.warning:SetPoint("BOTTOM", self.frame.healthy, "BOTTOM", 0, -(warningDuration * frameWidthUnit))
-    self.frame.danger:SetPoint("BOTTOM", self.frame.warning, "BOTTOM", 0, -(dangerDuration * frameWidthUnit))
+    self.frame.healthy:SetPoint("BOTTOM", self.frame.barscontainer, "TOP", 0, -healthyDuration * frameWidthUnit)
+    self.frame.warning:SetPoint("BOTTOM", self.frame.barscontainer, "TOP", 0, -warningDuration * frameWidthUnit)
+    self.frame.danger:SetPoint("BOTTOM", self.frame.barscontainer, "TOP", 0, -dangerDuration * frameWidthUnit)
   end
 
   -- update cooldowns

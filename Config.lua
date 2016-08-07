@@ -12,6 +12,7 @@ AtonementBarDB.defaultConfig = {
     backgroundColor = { r = 0, g = 0, b = 0, a = 0.6 },
     border = "Pixel Border",
     borderColor = { r = 0, g = 0, b = 0, a = 1 },
+    highlightBorderColor = { r = 0.141176471, g = 0.356862745, b = 0.141176471 },
     statusbar = "Solid",
     font = nil,
     raidthresholds = {
