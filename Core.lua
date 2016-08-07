@@ -36,30 +36,38 @@ AtonementBar.frame:SetPoint("CENTER", UIParent)
 AtonementBar.frame:SetMovable(true)
 AtonementBar.frame:SetUserPlaced(true)
 AtonementBar.frame:SetClampedToScreen(true)
+AtonementBar.frame:Hide()
 
 local options = {
   name = "AtonementBar",
   handler = AtonementBar,
   type = "group",
   args = {
-    lock = {
-      name = "Lock",
-      desc = "Enables / disables frame lock, allowing AtonementBar to be dragged",
-      type = "toggle",
-      get = function(info) return AtonementBar.db.profile.locked end,
-      set = "SetFrameLock"
-    },
-    autohide = {
-      name = "Show Only in Group",
-      desc = "Show AtonementBar only when in a party or raid",
-      type = "toggle",
-      get = function(info) return AtonementBar.db.profile.autohide end,
-      set = "SetAutohide"
-    },
     general = {
       name = "General",
       type = "group",
       args = {
+        autohide = {
+          name = "Show Only in Group",
+          desc = "Show AtonementBar only when in a party or raid",
+          type = "toggle",
+          get = function(info) return AtonementBar.db.profile.autohide end,
+          set = "SetAutohide"
+        },
+        showCounter = {
+          name = "Show Atonement Count",
+          desc = "Show a counter of the total number of active atonements",
+          type = "toggle",
+          get = function(info) return AtonementBar.db.profile.showCounter end,
+          set = "SetShowCounter"
+        },
+        showTimers = {
+          name = "Show Bar Timer Text",
+          desc = "Show counters of the number of seconds remaining at each threshold",
+          type = "toggle",
+          get = function(info) return AtonementBar.db.profile.showTimers end,
+          set = "SetShowTimers"
+        },
         colors = {
           name = "Colors",
           type = "group",
@@ -199,12 +207,20 @@ local options = {
       name = "Frame",
       type = "group",
       args = {
+        lock = {
+          name = "Lock",
+          desc = "Enables / disables frame lock, allowing AtonementBar to be dragged",
+          type = "toggle",
+          order = 1,
+          get = function(info) return AtonementBar.db.profile.locked end,
+          set = "SetFrameLock"
+        },
         vertical = {
           name = "Vertical",
           desc = "Toggles between horizontal and vertical layouts",
           type = "toggle",
           width = "full",
-          order = 1,
+          order = 2,
           get = function(info) return AtonementBar.db.profile.orientation ~= "horizontal" end,
           set = "SetVertical"
         },
@@ -214,7 +230,7 @@ local options = {
           type = "range",
           softMin = 10,
           softMax = 300,
-          order = 2,
+          order = 3,
           set = "SetFrameWidth",
           get = function(info) return AtonementBar.db.profile.width end
         },
@@ -224,7 +240,7 @@ local options = {
           type = "range",
           softMin = 10,
           softMax = 300,
-          order = 3,
+          order = 4,
           set = "SetFrameHeight",
           get = function(info) return AtonementBar.db.profile.height end
         }
@@ -283,6 +299,16 @@ function AtonementBar:SetShowCooldowns(info, val)
   end
 end
 
+function AtonementBar:SetShowCounter(info, val)
+  self.db.profile.showCounter = val
+  self:SetupFrame()
+end
+
+function AtonementBar:SetShowTimers(info, val)
+  self.db.profile.showTimers = val
+  self:SetupFrame()
+end
+
 function AtonementBar:SetVertical(info, val)
   local changed = false
   if val then
@@ -338,6 +364,11 @@ end
 
 -- Initialisation
 
+local function IsDiscPriest()
+  local class, classFileName = UnitClass("player")
+  return classFileName == "PRIEST" and GetSpecialization() == 1
+end
+
 function AtonementBar:OnInitialize()
   self.db = LibStub("AceDB-3.0"):New("AtonementBarDB", AtonementBarDB.defaultConfig, true)
   LibStub("AceConfig-3.0"):RegisterOptionsTable("AtonementBar", options, {"ab", "atonement", "atonmentbar"})
@@ -345,8 +376,8 @@ function AtonementBar:OnInitialize()
 
   self:SetupFrame()
 
-  self:GetAtonementDuration()
-  self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED", self.GetAtonementDuration)
+  self:SpecializationChanged()
+  self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED", self.SpecializationChanged)
   self:RegisterEvent("PLAYER_TALENT_UPDATE", self.GetAtonementDuration)
 
   if not self.db.profile.locked then
@@ -360,6 +391,20 @@ end
 
 function AtonementBar:OnDisable()
   self.frame:SetScript("OnUpdate", nil)
+end
+
+function AtonementBar:UpdateVisability()
+  if self.isDiscipline then
+    self.frame:Show()
+  else
+    self.frame:Hide()
+  end
+end
+
+function AtonementBar:SpecializationChanged()
+  AtonementBar.isDiscipline = IsDiscPriest()
+  AtonementBar:UpdateVisability()
+  AtonementBar:GetAtonementDuration()
 end
 
 function AtonementBar:SetupFrame()
@@ -376,7 +421,7 @@ function AtonementBar:SetupFrame()
 
   local statusBarTexture = media:Fetch("statusbar", conf.statusbar, false)
 
-  local frame = self.frame
+  local frame = self.frame or CreateFrame("frame", "AtonementBar", UIParent)
 
   if not frame:IsUserPlaced() or not frame:GetLeft() then
     frame:ClearAllPoints()
@@ -428,8 +473,12 @@ function AtonementBar:SetupFrame()
   frame.danger.text:ClearAllPoints();
 
   if conf.orientation == "horizontal" then
+    local barOffset = 0
+    if conf.showCounter then
+      barOffset = conf.height - 1
+    end
 
-    frame.bars:SetPoint("TOPLEFT", frame, "TOPLEFT", conf.height - 1, 0)
+    frame.bars:SetPoint("TOPLEFT", frame, "TOPLEFT", barOffset, 0)
     frame.bars:SetPoint("BOTTOMRIGHT", frame)
 
     frame.healthy:SetPoint("TOPLEFT", frame.barscontainer, "TOPLEFT")
@@ -444,7 +493,12 @@ function AtonementBar:SetupFrame()
     frame.danger:SetPoint("BOTTOMLEFT", frame.warning, "BOTTOMRIGHT")
     frame.danger.text:SetPoint("LEFT", frame.danger, "RIGHT")
   else
-    frame.bars:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -(conf.width - 1))
+    local barOffset = 0
+    if conf.showCounter then
+      barOffset =  -(conf.width - 1)
+    end
+
+    frame.bars:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, barOffset)
     frame.bars:SetPoint("BOTTOMRIGHT", frame)
 
     frame.healthy:SetPoint("TOPLEFT", frame.barscontainer, "TOPLEFT")
@@ -462,25 +516,34 @@ function AtonementBar:SetupFrame()
 
   -- Atonement counter
   frame.counter = frame.counter or CreateFrame("frame", nil, frame)
-	frame.counter:SetBackdrop(backdrop)
-  frame.counter:SetBackdropColor(conf.backgroundColor.r, conf.backgroundColor.g, conf.backgroundColor.b, conf.backgroundColor.a)
-  frame.counter:SetBackdropBorderColor(conf.borderColor.r, conf.borderColor.g, conf.borderColor.b, conf.borderColor.a)
-
-  if conf.orientation == "horizontal" then
-    frame.counter:ClearAllPoints();
-    frame.counter:SetPoint("TOPLEFT", frame)
-    frame.counter:SetPoint("BOTTOMLEFT", frame)
-    frame.counter:SetWidth(conf.height)
-  else
-    frame.counter:ClearAllPoints();
-    frame.counter:SetPoint("TOPLEFT", frame)
-    frame.counter:SetPoint("TOPRIGHT", frame)
-    frame.counter:SetHeight(conf.width)
-  end
-
   frame.counterText = frame.counterText or frame.counter:CreateFontString()
-  frame.counterText:SetPoint("CENTER", frame.counter, "CENTER")
-  frame.counterText:SetFont(media:Fetch("font", conf.font, false), 12, "OUTLINE")
+
+  if conf.showCounter then
+  	frame.counter:SetBackdrop(backdrop)
+    frame.counter:SetBackdropColor(conf.backgroundColor.r, conf.backgroundColor.g, conf.backgroundColor.b, conf.backgroundColor.a)
+    frame.counter:SetBackdropBorderColor(conf.borderColor.r, conf.borderColor.g, conf.borderColor.b, conf.borderColor.a)
+
+    if conf.orientation == "horizontal" then
+      frame.counter:ClearAllPoints();
+      frame.counter:SetPoint("TOPLEFT", frame)
+      frame.counter:SetPoint("BOTTOMLEFT", frame)
+      frame.counter:SetWidth(conf.height)
+    else
+      frame.counter:ClearAllPoints();
+      frame.counter:SetPoint("TOPLEFT", frame)
+      frame.counter:SetPoint("TOPRIGHT", frame)
+      frame.counter:SetHeight(conf.width)
+    end
+
+    frame.counterText:SetPoint("CENTER", frame.counter, "CENTER")
+    frame.counterText:SetFont(media:Fetch("font", conf.font, false), 12, "OUTLINE")
+
+    frame.counter:Show()
+    frame.counterText:Show()
+  else
+    frame.counter:Hide()
+    frame.counterText:Hide()
+  end
 
   frame:Show()
 
@@ -510,6 +573,12 @@ end
 
 function AtonementBar:Update()
   local self = AtonementBar
+  local conf = self.db.profile
+
+  if not self.isDiscipline then
+    return
+  end
+
   self:FindAtonementBuffs()
   self:UpdateVisibility()
 
@@ -517,9 +586,9 @@ function AtonementBar:Update()
   local count = #self.durations
   local maxDuration = self.atonementDuration
 
-  local thresholds = self.db.profile.raidthresholds
+  local thresholds = conf.raidthresholds
   if not IsInRaid() then
-    thresholds = self.db.profile.partythresholds
+    thresholds = conf.partythresholds
   end
 
   local healthyDuration = 0
@@ -537,44 +606,51 @@ function AtonementBar:Update()
     dangerDuration = math.max(0, math.min(maxDuration, self.durations[thresholds.danger] - (warningDuration + healthyDuration)))
   end
 
-  if healthyDuration > 0 then
+  local barSize = self.frame.barscontainer:GetWidth()
+  if conf.orientation ~= "horizontal" then
+    barSize = self.frame.barscontainer:GetHeight()
+  end
+
+  local fifteenPixelsDuration = (20 / barSize) * maxDuration
+  local textDisplayThreshold = maxDuration - fifteenPixelsDuration
+
+  if healthyDuration > 0 and (warningDuration - healthyDuration) > fifteenPixelsDuration and conf.showTimers then
     self.frame.healthy.text:SetText(math.ceil(healthyDuration))
-    self.frame.healthy.text:SetAlpha(cooldownFade(healthyDuration, 12, 1))
+    self.frame.healthy.text:SetAlpha(cooldownFade(healthyDuration, textDisplayThreshold, 0.5))
     self.frame.healthy.text:Show()
   else
     self.frame.healthy.text:Hide()
   end
 
-  if warningDuration > 0 then
+  if warningDuration > 0 and (dangerDuration - warningDuration) > fifteenPixelsDuration and conf.showTimers then
     self.frame.warning.text:SetText(math.ceil(warningDuration))
-    self.frame.warning.text:SetAlpha(cooldownFade(warningDuration, 12, 1))
+    self.frame.warning.text:SetAlpha(cooldownFade(warningDuration, textDisplayThreshold, 0.5))
     self.frame.warning.text:Show()
   else
     self.frame.warning.text:Hide()
   end
 
-  if dangerDuration > 0 then
+  if dangerDuration > 0 and conf.showTimers then
     self.frame.danger.text:SetText(math.ceil(dangerDuration))
-    self.frame.danger.text:SetAlpha(cooldownFade(dangerDuration, 12, 1))
+    self.frame.danger.text:SetAlpha(cooldownFade(dangerDuration, textDisplayThreshold, 0.5))
     self.frame.danger.text:Show()
   else
     self.frame.danger.text:Hide()
   end
 
-  if self.db.profile.orientation == "horizontal" then
-    local frameWidthUnit = self.frame.barscontainer:GetWidth() / maxDuration
+  local frameWidthUnit = barSize / maxDuration
+  if conf.orientation == "horizontal" then
     self.frame.healthy:SetPoint("RIGHT", self.frame.barscontainer, "LEFT", healthyDuration * frameWidthUnit, 0)
     self.frame.warning:SetPoint("RIGHT", self.frame.healthy, "RIGHT", warningDuration * frameWidthUnit, 0)
     self.frame.danger:SetPoint("RIGHT", self.frame.warning, "RIGHT", dangerDuration * frameWidthUnit, 0)
   else
-    local frameWidthUnit = self.frame.barscontainer:GetHeight() / maxDuration
     self.frame.healthy:SetPoint("BOTTOM", self.frame.barscontainer, "TOP", 0, -(healthyDuration * frameWidthUnit))
     self.frame.warning:SetPoint("BOTTOM", self.frame.healthy, "BOTTOM", 0, -(warningDuration * frameWidthUnit))
     self.frame.danger:SetPoint("BOTTOM", self.frame.warning, "BOTTOM", 0, -(dangerDuration * frameWidthUnit))
   end
 
   -- update cooldowns
-  if self.db.profile.showCooldowns then
+  if conf.showCooldowns then
     for i = 1, #self.trackedCooldowns, 1 do
       local spellId = self.trackedCooldowns[i]
       self:CheckSpellCooldown(spellId)
@@ -583,7 +659,12 @@ function AtonementBar:Update()
   end
 
   -- update Atonement counter
-  self.frame.counterText:SetText(#AtonementBar.durations)
+  if conf.showCounter then
+    self.frame.counterText:SetText(#AtonementBar.durations)
+
+    local color = (healthyDuration > 0 and conf.healthycolor) or (warningDuration > 0 and conf.warningcolor) or (dangerDuration > 0 and conf.dangercolor) or {r=1,g=1,b=1}
+    self.frame.counterText:SetTextColor(color.r, color.g, color.b, 1)
+  end
 end
 
 function AtonementBar:FindAtonementBuffs()
